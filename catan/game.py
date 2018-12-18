@@ -554,16 +554,13 @@ class Game(object):
         assigned_edges = {piece[1] for piece in d if piece[0] == 0}
         free_edges = hexgrid.legal_edge_coords() - assigned_edges
 
+        # random placement of both road and settlement 
         return (random.sample(free_nodes, 1)[0], random.sample(free_edges, 1)[0])
 
     def get_best_assignment(self, d):
         assigned_nodes = {piece[1] for piece in d if piece[0] == 1}
         free_nodes = hexgrid.legal_node_coords() - assigned_nodes
         node_choice = random.sample(free_nodes, 1)[0]
-
-        assigned_edges = {piece[1] for piece in d if piece[0] == 0}
-        free_edges = hexgrid.legal_edge_coords() - assigned_edges
-        edge_choice = random.sample(free_edges, 1)[0]
 
         # not building on the same hex 
         if self._cur_player in self.board.player_to_pieces:
@@ -579,7 +576,8 @@ class Game(object):
                 else:
                     node_choice = random.sample(free_nodes, 1)[0] 
 
-        return (node_choice, edge_choice)
+        # building road next to settlement 
+        return (node_choice, node_choice)
 
     @classmethod
     def get_debug_players(cls):
