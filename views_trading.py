@@ -25,6 +25,7 @@ class TradeFrame(tk.Frame):
     - sets the state of its buttons
     """
     def __init__(self, master, game):
+        print('hit init method of tradeframe')
         super(TradeFrame, self).__init__(master)
         self.master = master
         self.game = game

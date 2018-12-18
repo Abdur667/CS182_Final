@@ -172,6 +172,9 @@ class GameStateInGame(GameState):
     sub-states must implement:
         can_end_turn()
     """
+    def can_end_game(self):
+        return False 
+
     def is_in_game(self):
         return True
 
@@ -193,6 +196,7 @@ class GameStateInGame(GameState):
 
         :return Player
         """
+        print('next_player method in GSIG')
         logging.warning('turn={}, players={}'.format(
             self.game._cur_turn,
             self.game.players
@@ -374,6 +378,9 @@ class GameStatePreGame(GameStateInGame):
     sub-classes must implement:
         None
     """
+    def can_end_game(self):
+        return False
+
     def can_end_turn(self):
         return False
 
@@ -480,6 +487,9 @@ class GameStatePreGamePlacingPiece(GameStatePreGame):
     def can_buy_settlement(self):
         return False
 
+    def can_end_game(self):
+        return False 
+
     def can_buy_road(self):
         return False
 
@@ -530,6 +540,9 @@ class GameStateBeginTurn(GameStateInGame):
     """
     def can_end_turn(self):
         return False
+
+    def can_end_game(self):
+        return True
 
 
 class GameStateMoveRobber(GameStateInGame):

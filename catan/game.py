@@ -64,6 +64,7 @@ class Game(object):
         self.terrain_to_tiles = {} # set in #_terrain_to_tiles
         # self.resources_owned = {player: [] for player in self.players}
         # self.pregame_coords = {player: [] for player in self.players}
+        self.player_to_resources = {}
 
         self.board.observers.add(self)
 
@@ -230,9 +231,55 @@ class Game(object):
         self.notify_observers()
 
     def end(self):
-        # print('Game\'s end method called')
+        print('Game\'s end method called')
         self.catanlog.log_wins(self.get_cur_player())
+        print('final pieces = {}'.format(self.board.player_to_pieces))
+        self.evaluate_final(self.board.player_to_pieces)
         self.set_state(catan.states.GameStateNotInGame(self))
+        self.notify_observers()
+
+    def evaluate_final(self, pieces):
+        self.player_to_resources = {player: [] for player in pieces}
+
+        terrain_to_tiles = {}
+        vocab = {catan.board.Terrain.desert: 'Desert',
+        catan.board.Terrain.wheat: 'Wheat',
+        catan.board.Terrain.ore: 'Ore',
+        catan.board.Terrain.sheep: 'Sheep',
+        catan.board.Terrain.brick: 'Brick',
+        catan.board.Terrain.wood: 'Wood'}
+
+        for tile in self.board.tiles: 
+            print('tile={}'.format(tile))
+            if vocab[tile.terrain] in terrain_to_tiles:
+                print('tile.terrain={}'.format(tile.terrain))
+                print('vocab[tile.terrain]={}'.format(vocab[tile.terrain])) 
+                terrain_to_tiles[vocab[tile.terrain]].append(tile.tile_id)
+            else:
+                terrain_to_tiles[vocab[tile.terrain]] = [tile.tile_id]  
+        print('terrain_to_tiles={}'.format(terrain_to_tiles))
+
+        tile_id_to_terrain_type = {tile: [] for tile in hexgrid.legal_tile_ids()}
+        # for each terrain type
+        for terrain in terrain_to_tiles:
+            # for each tile
+            for tile in hexgrid.legal_tile_ids():
+                if tile in terrain_to_tiles[terrain]:
+                    tile_id_to_terrain_type[tile].append(terrain)
+
+        
+        # for each player 
+        for player in pieces:
+            # for each resource owned by the player 
+            for item in pieces[player]:
+                # if resource is a city 
+                if item[1] == catan.pieces.PieceType.settlement:
+                    coord = item[0]
+                    adjacent_tiles = hexgrid.adjacent_tiles_to_node(coord)
+                    for adj_tile in adjacent_tiles:
+                        self.player_to_resources[player].append(tile_id_to_terrain_type[adj_tile])
+
+        print(self.player_to_resources)
 
     def reset(self):
         # print('Game\'s reset method called')
@@ -255,7 +302,7 @@ class Game(object):
             return Player(self._cur_player.seat, self._cur_player.name, self._cur_player.color)
 
     def set_cur_player(self, player):
-        # print('Game\'s set_cur_player method called with cur_player={}'.format(Player(player.seat, player.name, player.color)))
+        print('Game\'s set_cur_player method called with cur_player={}'.format(Player(player.seat, player.name, player.color)))
         self._cur_player = Player(player.seat, player.name, player.color)
         # print('self._cur_player={}'.format(Player(player.seat, player.name, player.color)))
 
@@ -318,7 +365,7 @@ class Game(object):
         self.state.steal(victim)
 
     def stealable_players(self):
-        # print('\nGame\'s stealable_players method called\n')
+        print('\nGame\'s stealable_players method called\n')
         if self.robber_tile is None:
             return list()
         stealable = set()
@@ -462,18 +509,28 @@ class Game(object):
                         !!!!!!!!!!!!!!!!!!!!FINISHED TURN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!                \
 *******************************************************************************************************\
 *******************************************************************************************************')      
-        # print('\nGame\'s end_turn method called when cur_player={0}, next_player={1}\n'.format(self._cur_player, self.state.next_player))
+        print('\nGame\'s end_turn method called when cur_player={0}, next_player={1}\n'.format(self._cur_player, self.state.next_player))
         self.catanlog.log_ends_turn(self.get_cur_player())
         # print('self.state.next_player()={}'.format(self.state.next_player()))
 
         self.set_cur_player(self.state.next_player())
+        logging.debug('self.state is {}'.format(self.state))
+        if self.state.can_end_game():
+            print('self.state.can_end_game={}'.format(self.state.can_end_game))
+            logging.debug('*****************************************')
+            self.end()
+
         self._cur_turn += 1
+        logging.debug('cur_turn incremented to {}'.format(self._cur_turn))
 
         self.set_dev_card_state(catan.states.DevCardNotPlayedState(self))
         if self.state.is_in_pregame():
+            print('self.state.is_in_pregame() == TRUE')
             self.set_state(catan.states.GameStatePreGamePlacingPiece(self, catan.pieces.PieceType.settlement))
         else:
-            self.set_state(catan.states.GameStateBeginTurn(self))
+            print('self.state.is_in_pregame() == False and setting state to GSBT')
+            self.end()
+            # self.set_state(catan.states.GameStateBeginTurn(self))
 
         if 'agent1' in self._cur_player.name:
             if self.state.is_in_pregame():
@@ -497,9 +554,6 @@ class Game(object):
         assigned_edges = {piece[1] for piece in d if piece[0] == 0}
         free_edges = hexgrid.legal_edge_coords() - assigned_edges
 
-        if self._cur_player in self.board.player_to_pieces: 
-            print('TEST{}'.format(self.board.player_to_pieces[self._cur_player]))
-
         return (random.sample(free_nodes, 1)[0], random.sample(free_edges, 1)[0])
 
     def get_best_assignment(self, d):
@@ -517,65 +571,15 @@ class Game(object):
             while flag:
                 choice_adjacent = hexgrid.adjacent_tiles_to_node(node_choice)
 
-                past_choice = self.board.player_to_pieces[self._cur_player]
-                past_adjacent = hexgrid.adjacent_tiles_to_node(past_choice[-1])
-
-                print('choice_adjacent={0} and past_adjacent={1}'.format(choice_adjacent, past_adjacent))
+                past_choice = self.board.player_to_pieces[self._cur_player][0]
+                past_adjacent = hexgrid.adjacent_tiles_to_node(past_choice[0])
 
                 if set(choice_adjacent).isdisjoint(set(past_adjacent)):
                     flag = False
-
-        
+                else:
+                    node_choice = random.sample(free_nodes, 1)[0] 
 
         return (node_choice, edge_choice)
-
-
-
-    # def tile_to_terrain(self, tile):
-
-    #     terrain_to_tiles = {}
-    #     desert = catan.board.Terrain.desert
-    #     wheat = catan.board.Terrain.wheat
-    #     ore = catan.board.Terrain.ore
-    #     sheep = catan.board.Terrain.sheep
-    #     brick = catan.board.Terrain.brick
-
-    #     for tile in self.board.tiles: 
-    #         if tile.terrain in terrain_to_tiles: 
-    #             terrain_to_tiles[tile.terrain].append(tile)
-    #         else:
-    #             terrain_to_tiles[tile.terrain] = [tile] 
-
-    #     tiles_to_terrain = {}
-
-    #     for tile in self
-    #     for terrain in terrain_to_tiles:
-    #         if 
-
-    #     print(hexgrid.nodes_touching_tile(tiles[desert][0].tile_id))
-
-        # print(tiles[desert])
-
-
-    
-    # def terrain_to_tile(self, tile_id):
-    #     self.
-    #     _terrain_to_tiles()
-
-
-    # def _terrain_to_tiles(self):
-    #     desert = catan.board.Terrain.desert
-    #     wheat = catan.board.Terrain.wheat
-    #     ore = catan.board.Terrain.ore
-    #     sheep = catan.board.Terrain.sheep
-    #     brick = catan.board.Terrain.brick
-
-    #     for tile in self.board.tiles: 
-    #         if tile.terrain in self.terrain_to_tiles: 
-    #             self.terrain_to_tiles[tile.terrain].append(tile)
-    #         else:
-    #             self.terrain_to_tiles[tile.terrain] = [tile] 
-
 
     @classmethod
     def get_debug_players(cls):

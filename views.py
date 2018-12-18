@@ -12,6 +12,7 @@ from catan.game import Player
 from catan.pieces import PieceType, Piece
 import tkinterutils
 import views_trading
+from collections import Counter
 
 can_do = {
     True: tkinter.NORMAL,
@@ -838,9 +839,9 @@ class RobberFrame(tkinter.Frame):
         self.set_states()
 
     def set_states(self):
-        # logging.debug('views.set_states called and calling game.stealable_players')
+        logging.debug('views.set_states called and calling game.stealable_players')
         stealable_strs = [str(player) for player in self.game.stealable_players()]
-        # logging.debug('stealable_players={}'.format(stealable_strs))
+        logging.debug('stealable_players={}'.format(stealable_strs))
         if stealable_strs:
             self.player_str.set(stealable_strs[0])
         else:
@@ -1058,13 +1059,33 @@ class EndGameFrame(tkinter.Frame):
         self.end_game.pack(side=tkinter.TOP, fill=tkinter.X)
 
     def on_end_game(self):
-        title = 'End Game Confirmation'
-        message = 'End Game? ({0} ({1}) wins)'.format(
-            self.game.get_cur_player().color, self.game.get_cur_player().name
-        )
-        if messagebox.askyesno(title, message):
-            self.game.end()
+        title = 'Pregame has ended!'
+        message = ''
+        d = self.game.player_to_resources
+        print('d={}'.format(d))
 
+        temp = {k: {} for k in d.keys()}
+        for k in d.keys():
+            lst2 = [l[0] for l in d[k]]
+            temp[k] = Counter(lst2)
+        print('returning temp={}'.format(temp)) 
+
+        for k, v in temp.items():
+            res = ''
+            for k1, v1 in v.items():
+                res = res + str(v1) + ' ' + str(k1) + ', '
+            res.rstrip(', \n')
+            message = message + '{} got resources: {}\n\n'.format(k, res)
+        message.rstrip(',\n')
+        # message = 'End Game? ({0} ({1}) had the best building strategy)'.format(
+            # self.game.get_cur_player().color, self.game.get_cur_player().name
+        # )
+        print('message is {}'.format(message))
+        messagebox.showinfo(title, message)
+        # self.views.BoardFrame._board_canvas.destroy()
+
+# {green (abdur): [[sheep], [sheep], [brick], [wheat], [wood], [brick]], blue (agent1): [[wood], [wood], [wood]], 
+# red (agent2): [[ore], [ore], [brick]], orange (vitor): [[brick], [sheep], [brick], [brick], [wheat], [brick]]}
 
 class TkinterOptionWrapper:
     """Dynamically hook up the board options to tkinter checkbuttons.
@@ -1098,7 +1119,7 @@ class TkinterOptionWrapper:
         self._opts = {}
 
         # Can't define this as a closure inside the following for loop as each
-        # definition will become the value of cb which has a scope local to the
+        # definition will become the value of cb which has a scope fal to the
         # function, not to the for loop.  Use functools.partial in the loop to
         # create a specific callable instance.
         def cb_template(name, var):

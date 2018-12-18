@@ -58,6 +58,7 @@ class CatanSpectator(tkinter.Frame):
         self._in_game = self.game.state.is_in_game()
         if was_in_game and not self.game.state.is_in_game():
             logging.debug('we were in game, NOW WE\'RE NOT')
+            views.EndGameFrame.on_end_game(self)
             self._toolbar_frame.grid_forget()
             self._toolbar_frame = self._setup_game_toolbar_frame
             self._toolbar_frame.grid(row=0, column=1, rowspan=2, sticky=tkinter.N)

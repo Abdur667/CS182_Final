@@ -149,9 +149,9 @@ class Board(object):
         self.pieces[(hex_type, coord)] = piece
 
         if piece.owner in self.player_to_pieces:
-            self.player_to_pieces[piece.owner].append(coord)
+            self.player_to_pieces[piece.owner].append((coord, piece.type))
         else:
-            self.player_to_pieces[piece.owner] = [coord]
+            self.player_to_pieces[piece.owner] = [(coord, piece.type)]
 
     def move_piece(self, piece, from_coord, to_coord):
         from_index = (self._piece_type_to_hex_type(piece.type), from_coord)
@@ -176,13 +176,13 @@ class Board(object):
             return Piece(None, None)
         indexes = set((self._piece_type_to_hex_type(t), coord) for t in types)
         pieces = [self.pieces[idx] for idx in indexes if idx in self.pieces]
-        if len(pieces) == 0:
+        # if len(pieces) == 0:
             #logging.warning('Found zero pieces at {}'.format(indexes))
-            pass
-        elif len(pieces) == 1:
-            logging.debug('Found one piece at {}: {}'.format(indexes, pieces[0]))
-        elif len(pieces) > 1:
-            logging.debug('Found {} pieces at {}: {}'.format(len(pieces), indexes, coord, pieces))
+            # pass
+        # elif len(pieces) == 1:
+            # logging.debug('Found one piece at {}: {}'.format(indexes, pieces[0]))
+        # elif len(pieces) > 1:
+            # logging.debug('Found {} pieces at {}: {}'.format(len(pieces), indexes, coord, pieces))
         return pieces
 
     def get_port_at(self, tile_id, direction):

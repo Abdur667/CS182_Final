@@ -112,4 +112,3 @@ Codebase originally forked from [fruitnuke/catan](https://github.com/fruitnuke/c
 
 GPLv3
 # CS182_Final
-# CS182_Final
